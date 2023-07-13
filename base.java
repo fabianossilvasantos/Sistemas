@@ -50,10 +50,12 @@ public class base {
 
             }
             else if (alg == 4) { //PRIORIDADE PREEMPTIVO
-                //PRIORIDADE(true, tempo_execucao, tempo_espera, tempo_restante, tempo_chegada, prioridade);
+                restauraProcessos(processos, processosOriginal);
+                prioridadeNaoPreemptivo(processos);
             }
             else if (alg == 5) { //PRIORIDADE NÃO PREEMPTIVO
-                //PRIORIDADE(false, tempo_execucao, tempo_espera, tempo_restante, tempo_chegada, prioridade);
+                restauraProcessos(processos, processosOriginal);
+                prioridadeNaoPreemptivo(processos);
 
             }
             else if (alg == 6) { //Round_Robin
@@ -209,15 +211,65 @@ public class base {
         imprimeEspera(processos);
     }
 
-    public static void PRIORIDADE(boolean preemptivo, int[] execucao, int[] espera, int[] restante, int[] chegada, int[] prioridade){
-        int[] tempo_execucao = execucao.clone();
-        int[] tempo_espera = espera.clone();
-        int[] tempo_restante = restante.clone();
-        int[] tempo_chegada = chegada.clone();
-        int[] prioridade_temp = prioridade.clone();
+    public static void prioridadeNaoPreemptivo(int [][]processos){
+        int [][] processosOrganizados = calculaPrioridadeNaoPreemptivo(processos);
+        int processoEmExecucao =0;
 
-        //implementar código do Prioridade preemptivo e não preemptivo
-        //...
+        //implementar código do prioridade não preemptivo
+
+        for(int  contador=1; contador < 500; contador++ ){ //contador é o tempo
+            if(processosOrganizados[processoEmExecucao][2] <= contador){//verificando se algum processos chegou, se nenhum processo for menor que o contador significa que nenhum chegou ainda
+                processosOrganizados[processoEmExecucao][4]--;
+                System.out.println("Tempo "+contador+": processo "+processosOrganizados[processoEmExecucao][0]+" Restante: "+processosOrganizados[processoEmExecucao][4]);
+                espera(processosOrganizados, processosOrganizados[processoEmExecucao][0], contador);
+                delay();
+                //se o processo atual executou todos os tempos dele, entao incrementa processo em execucao
+                if (processosOrganizados[processoEmExecucao][4]  == 0) {  //Pegando o processo pela posição processos[posição = linhas][atributo = colunas]
+                    //se todos os processos executaram, termina o programa
+                    if(processoEmExecucao==(n_processos-1)){
+                        break;
+                    } //se o processo em execução for igual ao numero de processos -1
+                    else {
+                        processoEmExecucao++;
+                    }
+                }
+            }else{
+                System.out.println("Tempo "+contador+ " nenhum processo está pronto");
+            }
+
+        }
+        imprimeEspera(processos);
+    }
+
+    public static void prioridadePreemptivo(int[][]processos){
+        int countFinal = 0;
+        Arrays.sort(processos, Comparator.comparingInt((int[] row) -> row[3]).reversed()); //organizar/ordenando com base de no tempo prioridade (coluna 3) // organizando do mais longo para o mais curto
+        Arrays.sort(processos, Comparator.comparingInt(row -> row[2])); // organizando por ordem do tempo de chegada.
+        int processoEmExecucao = calculaPrioridadePreemptivo(processos,0,1);
+
+        for(int  contador=1; contador < 100; contador++ ){ //contador é o tempo
+            processoEmExecucao = calculaPrioridadePreemptivo(processos,processoEmExecucao,contador);
+            if(processos[processoEmExecucao][2] <= contador){//verificando se algum processos chegou, se nenhum processo for menor que o contador significa que nenhum chegou ainda
+                processos[processoEmExecucao][4]--;
+                System.out.println("Tempo "+contador+": processo "+processos[processoEmExecucao][0]+" Restante: "+processos[processoEmExecucao][4]); // Escrevendo o tempo dos processos e o tempo restante
+                espera(processos, processos[processoEmExecucao][0], contador);
+                delay();
+                //se o processo atual executou todos os tempos dele, entao incrementa processo em execucao
+                if (processos[processoEmExecucao][4]  == 0) {
+                    countFinal += 1;
+                    if (countFinal == n_processos) {
+                        break;
+                    } //se o processo em execução for igual ao numero de processos -1
+                    else {
+                        processoEmExecucao = calculaPrioridadePreemptivo(processos,processoEmExecucao,contador);
+                    }
+                }
+            }else{
+                System.out.println("Tempo "+contador+ " nenhum processo está pronto");
+            }
+
+        }
+        imprimeEspera(processos);
     }
 
     public static void Round_Robin(int[] execucao, int[] espera, int[] restante){
@@ -314,5 +366,31 @@ public class base {
             }
         }
         return processoemexecucao;
+    }
+
+
+    public static int [][] calculaPrioridadeNaoPreemptivo(int [][]processos){ //reordenando a matriz em ordem de chegada e execução
+        Arrays.sort(processos, Comparator.comparingInt((int[] row) -> row[3]).reversed()); //organizar/ordenando com base de no tempo restante/execução (coluna 4) // organizando do mais curto para o mais longo
+        Arrays.sort(processos, Comparator.comparingInt(row -> row[2])); //ordenando com base no que chegou primeiro até o que chegou por ultimo, usando tempo de chegada
+
+        return processos;
+
+    }
+    public static int calculaPrioridadePreemptivo(int[][] processos, int processoEmExecucao, int unidadeTempo) {
+        int maiorValor = processos[0][3];
+
+        for (int i = 1; i < processos.length; i++) {
+            if (processos[i][3] < maiorValor) {
+                maiorValor = processos[i][3];
+            }
+        }
+
+        for (int i = 0; i < processos.length; i++) {
+            if ((processos[i][2] <= unidadeTempo) && (processos[i][4] != 0) && (processos[i][3] > maiorValor - 1)) { // fazendo os testes logicos, se o processo chegou e nao terminou e for menor que o tempo em execucao dai faz a troca
+                processoEmExecucao = i;
+                maiorValor = processos[i][3]; // fazendo comparacoes no tempo de execucao
+            }
+        }
+        return processoEmExecucao;
     }
 }
